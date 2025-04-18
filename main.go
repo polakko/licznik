@@ -72,6 +72,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if !strings.HasPrefix(string(response), expectedMeterID) {
+		mqttClient.Publish(mqttStatusTopic, qos, false, "{\"status\":\"Błąd ID\"}")
 		log.Fatalf("unexpected ID string: %s", response)
 	}
 
@@ -90,18 +91,25 @@ func main() {
 		Parity:   serial.EvenParity,
 	})
 
+	found := false
 	// read response
 	for {
 		response, err = reader.ReadBytes('\n')
 		if err != nil {
 			log.Fatalf("response: %s, err %v\n", response, err)
+			mqttClient.Publish(mqttStatusTopic, qos, false, "{\"status\":\"Błąd odczytu\"}")
 		}
 		if strings.HasPrefix(string(response), totalCode) {
+			found = true
 			sendResult(mqttClient, string(response))
 		}
 		if response[0] == '!' {
 			break
 		}
+	}
+	if !found {
+		log.Println("No total code found")
+		mqttClient.Publish(mqttStatusTopic, qos, false, "{\"status\":\"Brak linii\"}")
 	}
 }
 
@@ -109,7 +117,7 @@ func sendResult(mqttClient mqtt.Client, result string) {
 	value, err := extractValue(result)
 	if err != nil {
 		log.Printf("Error extracting value: %v\n", err)
-		mqttClient.Publish(mqttStatusTopic, qos, false, "{\"status\":\"Nieudany\"}")
+		mqttClient.Publish(mqttStatusTopic, qos, false, "{\"status\":\"Błąd wartości\"}")
 		return
 	}
 
