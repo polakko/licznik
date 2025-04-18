@@ -5,9 +5,6 @@ send:
 run:
 	ssh rpizero "/opt/licznik/licznik"
 
-all:
-	GOARCH=arm64 go build .
-	scp golicznik rpizero:
-	ssh rpizero "/opt/licznik/licznik"
+all: send run
 
-.PHONY: build run all
+.PHONY: build run
